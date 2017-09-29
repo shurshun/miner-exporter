@@ -1,0 +1,4 @@
+.git
+glide.*
+vendor
+Dockerfile

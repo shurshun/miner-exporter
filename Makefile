@@ -1,30 +1,21 @@
-DATE     = $(shell date +%Y%m%d%H%M)
-IMAGE    ?= bugroger/miner-exporter
-VERSION  = v$(DATE)
-GOOS     ?= $(shell go env | grep GOOS | cut -d'"' -f2)
-BINARIES := miner-exporter
+APP=claymore-exporter
+TAG=latest
 
-LDFLAGS := -X github.com/bugroger/miner-exporter/main.VERSION=$(VERSION)
-GOFLAGS := -ldflags "$(LDFLAGS)"
+# Metadata about this makefile and position
+MKFILE_PATH := $(lastword $(MAKEFILE_LIST))
+CURRENT_DIR := $(dir $(realpath $(MKFILE_PATH)))
+CURRENT_DIR := $(CURRENT_DIR:/=)
 
-SRCDIRS  := .
-PACKAGES := $(shell find $(SRCDIRS) -type d)
-GOFILES  := $(addsuffix /*.go,$(PACKAGES))
-GOFILES  := $(wildcard $(GOFILES))
+.DEFAULT_GOAL := build
 
-.PHONY: all clean
+DOCKER_REPO=hub.netbox.ru:5000/mining
+MINING_REPO=10.20.0.16:5000/mining
 
-all: $(BINARIES:%=bin/$(GOOS)/%)
-
-bin/%: $(GOFILES) Makefile
-	GOOS=$(*D) GOARCH=amd64 go build $(GOFLAGS) -v -i -o $(@D)/$(@F) main.go claymore_dual_miner.go
-
-build: $(BINARIES:%=bin/linux/%)
-	docker build $(BUILD_ARGS) -t $(IMAGE):$(VERSION) .
+build:
+	docker build --compress --force-rm --pull -t "${APP}:${TAG}" .
+	docker tag "${APP}:${TAG}" "${DOCKER_REPO}/${APP}:${TAG}"
+	docker push "${DOCKER_REPO}/${APP}:${TAG}"
 
 push:
-	docker push $(IMAGE):$(VERSION)
-
-clean:
-	rm -rf bin/*
-
+	docker tag "${APP}:${TAG}" "${MINING_REPO}/${APP}:${TAG}"
+	docker push "${MINING_REPO}/${APP}:${TAG}"
